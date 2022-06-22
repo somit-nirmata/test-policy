@@ -1,0 +1,68 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  annotations:
+    pod-policies.kyverno.io/autogen-controllers: none
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/description: 'The Kubernetes cluster autoscaler does not evict
+      pods that use hostPath or emptyDir volumes.  To allow eviction of these pods,
+      the annotation cluster-autoscaler.kubernetes.io/safe-to-evict=true  must be
+      added to the pods. '
+    policies.kyverno.io/title: Add safe-to-evict label
+  name: add-safe-to-evict
+spec:
+  rules:
+  - match:
+      resources:
+        kinds:
+        - Pod
+    mutate:
+      overlay:
+        metadata:
+          annotations:
+            +(cluster-autoscaler.kubernetes.io/safe-to-evict): "true"
+        spec:
+          volumes:
+          - (emptyDir): {}
+    name: annotate-empty-dir
+  - match:
+      resources:
+        kinds:
+        - Pod
+    mutate:
+      overlay:
+        metadata:
+          annotations:
+            +(cluster-autoscaler.kubernetes.io/safe-to-evict): "true"
+        spec:
+          volumes:
+          - (hostPath):
+              path: '*'
+    name: annotate-host-path
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  annotations:
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/description: A read-only root file system helps to enforce
+      an immutable infrastructure strategy;  the container only needs to write on
+      the mounted volume that persists the state.  An immutable root filesystem can
+      also prevent malicious binaries from writing to the  host system.
+    policies.kyverno.io/title: Require Read-Only Root FS
+  name: require-ro-rootfs
+spec:
+  rules:
+  - match:
+      resources:
+        kinds:
+        - Pod
+    name: validate-readOnlyRootFilesystem
+    validate:
+      message: Root filesystem must be read-only.
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              readOnlyRootFilesystem: true
+  validationFailureAction: audit
