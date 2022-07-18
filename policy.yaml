@@ -1,41 +1,25 @@
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+---
 metadata:
+  name: "require-labels"
   annotations:
-    pod-policies.kyverno.io/autogen-controllers: none
-    policies.kyverno.io/category: Best Practices
-    policies.kyverno.io/description: 'The Kubernetes cluster autoscaler does not evict
-      pods that use hostPath or emptyDir volumes.  To allow eviction of these pods,
-      the annotation cluster-autoscaler.kubernetes.io/safe-to-evict=true  must be
-      added to the pods. '
-    policies.kyverno.io/title: Add safe-to-evict label
-  name: add-safe-to-evict
+    policies.kyverno.io/category: "Best Practices"
+    policies.kyverno.io/description: "Kubernetes recommends a set of standard labels\
+      \ for applications.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/"
+apiVersion: "kyverno.io/v1"
+kind: "ClusterPolicy"
 spec:
+  validationFailureAction: "audit"
   rules:
   - match:
       resources:
         kinds:
-        - Pod
-    mutate:
-      overlay:
+        - "Pod"
+    name: "check-for-labels"
+    validate:
+      pattern:
         metadata:
-          annotations:
-            +(cluster-autoscaler.kubernetes.io/safe-to-evict): "true"
-        spec:
-          volumes:
-          - (emptyDir): {}
-    name: annotate-empty-dir
-  - match:
-      resources:
-        kinds:
-        - Pod
-    mutate:
-      overlay:
-        metadata:
-          annotations:
-            +(cluster-autoscaler.kubernetes.io/safe-to-evict): "true"
-        spec:
-          volumes:
-          - (hostPath):
-              path: '*'
-    name: annotate-host-path
+          labels:
+            app.kubernetes.io/name: "?*"
+            app.kubernetes.io/instance: "?*"
+      message: "The labels `app.kubernetes.io/name` and `app.kubernetes.io/instance`\
+        \ are recommended."
